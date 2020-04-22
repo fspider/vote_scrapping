@@ -5,12 +5,16 @@ import pytesseract
 import cv2
 import datetime
 import csv
+import os
 
 pytesseract.pytesseract.tesseract_cmd = 'D:\\git\\vote_scrapping\\Tesseract-OCR\\tesseract.exe'
 
 class VotersParser:
     def __init__(self, parent):
         self.par = parent
+        self.directory = 'data'
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
     def parse(self, voters, no):
         self.voters = voters
@@ -174,11 +178,11 @@ class Scrap:
             # print(r.content)
             html = r.content.decode('utf-8')
             if "District:" in html:
-                print("OKOKOK")
+                # print(datetime.datetime.now(), "OKOKOK")
                 # with open("out.html", 'wb') as f:
                 #     f.write(r.content)
                 self.votersParser.parse(html, no)
-                print('nRows=', self.votersParser.nRows)
+                print(datetime.datetime.now(), 'nRows=', self.votersParser.nRows)
                 with open('index.csv', 'a', newline='', encoding="utf-8") as index_file:
                     index_writer = csv.writer(index_file)
                     index_writer.writerow([no, cur[0], cur[1], cur[2], cur[3], name[0], name[1], name[2], name[3], self.votersParser.nRows])
