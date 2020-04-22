@@ -8,10 +8,9 @@ import csv
 
 pytesseract.pytesseract.tesseract_cmd = 'D:\\git\\vote_scrapping\\Tesseract-OCR\\tesseract.exe'
 
-
 class VotersParser:
-    def __init__(self):
-        pass
+    def __init__(self, parent):
+        self.par = parent
 
     def parse(self, voters, no):
         self.voters = voters
@@ -39,7 +38,11 @@ class VotersParser:
                             break
                         self.remove("<td>")
                         item = self.read_content()
-                        row_list.append(item)
+                        if i == 5:
+                            row_list.append(item[0])
+                            row_list.append(item[4:])
+                        else :
+                            row_list.append(item)
                         self.remove("</td>")
                     if isFinished:
                         return
@@ -116,10 +119,14 @@ class Scrap:
         # print(cookie)
         html = r.content.decode('utf-8')
         self.token = re.search('name=\"form\[\_token\]\" value=\"(.*?)\"', html).group(1)
-        self.votersParser = VotersParser()
+        self.dist = []
+        for i in range(1, 15):
+            self.dist.append(re.search('<option value=\"'+str(i)+'\"\>(.*?) \<\/option\>', html).group(1))
+
+        self.votersParser = VotersParser(self)
         with open('index.csv', 'w', newline='') as index_file:
             index_writer = csv.writer(index_file)
-            index_writer.writerow(['no', 'district', 'localBody', 'ward', 'pollingStation', 'nRows'])
+            index_writer.writerow(['no', 'district_id', 'localBody_id', 'ward_id', 'pollingStation_id', 'district_name', 'localBody_name', 'ward_name', 'pollingStation_name','nRows'])
 
     def get_captcha(self):
         response = self.session.get(self.captcha_url, headers={'Cookie': self.cookie})
@@ -147,7 +154,7 @@ class Scrap:
         # print(captcha)
         return captcha
 
-    def scrap(self, cur, no):
+    def scrap(self, cur, name, no):
         print('->', cur, no)
         while True:
             captcha = self.get_captcha()
@@ -174,7 +181,7 @@ class Scrap:
                 print('nRows=', self.votersParser.nRows)
                 with open('index.csv', 'a', newline='') as index_file:
                     index_writer = csv.writer(index_file)
-                    index_writer.writerow([no, cur[0], cur[1], cur[2], cur[3], self.votersParser.nRows])
+                    index_writer.writerow([no, cur[0], cur[1], cur[2], cur[3], name[0], name[1], name[2], name[3], self.votersParser.nRows])
                 break
             else:
                 print("Oh no!")
@@ -188,15 +195,17 @@ class Scrap:
 
     def start(self):
         cr = self.st
-
+        self.name = ['', '', '', '']
         flag = True
         for s0 in range(self.st[0], self.ed[0] + 1):
+            self.name[0] = self.dist[s0-1]
 
             r = self.session.post(self.district_url, data={"value": s0})
             d1 = json.loads(json.loads(r.content))["rData"]
             le1 = len(d1)
             for i in range(le1):
                 s1 = int(d1[i]["id"])
+                self.name[1] = d1[i]["lb_name"]
                 if flag and s1 != self.st[1]:
                     continue
 
@@ -205,6 +214,7 @@ class Scrap:
                 le2 = len(d2)
                 for j in range(le2):
                     s2 = int(d2[j]["id"])
+                    self.name[2] = d2[j]["ward_name"]
                     if flag and s2 != self.st[2]:
                         continue
 
@@ -213,6 +223,7 @@ class Scrap:
                     le3 = len(d3)
                     for k in range(le3):
                         s3 = int(d3[k]["id"])
+                        self.name[3] = d3[k]["pol_station_name"]
                         if flag and s3 != self.st[3]:
                             continue
 
@@ -220,7 +231,7 @@ class Scrap:
                         if [s0, s1, s2, s3] == self.ed:
                             return
 
-                        self.scrap([s0, s1, s2, s3], self.no)
+                        self.scrap([s0, s1, s2, s3], self.name, self.no)
                         self.no += 1
 
 
