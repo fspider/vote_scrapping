@@ -13,8 +13,8 @@ class VotersParser:
     def __init__(self, parent):
         self.par = parent
         self.directory = 'data'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
 
     def parse(self, voters, no):
         self.voters = voters
