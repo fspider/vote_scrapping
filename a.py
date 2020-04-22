@@ -124,7 +124,7 @@ class Scrap:
             self.dist.append(re.search('<option value=\"'+str(i)+'\"\>(.*?) \<\/option\>', html).group(1))
 
         self.votersParser = VotersParser(self)
-        with open('index.csv', 'w', newline='') as index_file:
+        with open('index.csv', 'w', newline='', encoding="utf-8") as index_file:
             index_writer = csv.writer(index_file)
             index_writer.writerow(['no', 'district_id', 'localBody_id', 'ward_id', 'pollingStation_id', 'district_name', 'localBody_name', 'ward_name', 'pollingStation_name','nRows'])
 
@@ -179,7 +179,7 @@ class Scrap:
                 #     f.write(r.content)
                 self.votersParser.parse(html, no)
                 print('nRows=', self.votersParser.nRows)
-                with open('index.csv', 'a', newline='') as index_file:
+                with open('index.csv', 'a', newline='', encoding="utf-8") as index_file:
                     index_writer = csv.writer(index_file)
                     index_writer.writerow([no, cur[0], cur[1], cur[2], cur[3], name[0], name[1], name[2], name[3], self.votersParser.nRows])
                 break
