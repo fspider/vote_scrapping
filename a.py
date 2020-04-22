@@ -128,9 +128,10 @@ class Scrap:
             self.dist.append(re.search('<option value=\"'+str(i)+'\"\>(.*?) \<\/option\>', html).group(1))
 
         self.votersParser = VotersParser(self)
-        with open('index.csv', 'w', newline='', encoding="utf-8") as index_file:
-            index_writer = csv.writer(index_file)
-            index_writer.writerow(['no', 'district_id', 'localBody_id', 'ward_id', 'pollingStation_id', 'district_name', 'localBody_name', 'ward_name', 'pollingStation_name','nRows'])
+        if not os.path.isfile('index.csv'):
+            with open('index.csv', 'w', newline='', encoding="utf-8") as index_file:
+                index_writer = csv.writer(index_file)
+                index_writer.writerow(['no', 'district_id', 'localBody_id', 'ward_id', 'pollingStation_id', 'district_name', 'localBody_name', 'ward_name', 'pollingStation_name','nRows'])
 
     def get_captcha(self):
         response = self.session.get(self.captcha_url, headers={'Cookie': self.cookie})
