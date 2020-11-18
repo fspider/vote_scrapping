@@ -6,8 +6,9 @@ import cv2
 import datetime
 import csv
 import os
+import numpy as np
 
-pytesseract.pytesseract.tesseract_cmd = 'D:\\git\\vote_scrapping\\Tesseract-OCR\\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = 'D:\\git\\Tesseract-OCR\\tesseract.exe'
 
 class VotersParser:
     def __init__(self, parent):
@@ -33,25 +34,31 @@ class VotersParser:
                 row_list = [no]
                 # Parse Row
                 isFinished = False
-                while self.pos < self.len:
-                    # Check Next Item is <td>
-                    for i in range(7):
-                        self.remove_space()
-                        if self.voters[self.pos + 1] != 't' or self.voters[self.pos + 2] != 'd':
-                            isFinished = True
-                            break
-                        self.remove("<td>")
-                        item = self.read_content()
-                        if i == 5:
-                            row_list.append(item[0])
-                            row_list.append(item[4:])
-                        else :
-                            row_list.append(item)
-                        self.remove("</td>")
-                    if isFinished:
-                        return
-                    self.remove_td()
-                    break
+
+                # Check Next Item is <td>
+                for i in range(7):
+                    self.remove_space()
+                    if self.voters[self.pos + 1] != 't' or self.voters[self.pos + 2] != 'd':
+                        isFinished = True
+                        break
+                    self.remove("<td>")
+                    if i == 0:
+                        self.remove("<strong>")
+
+                    item = self.read_content()
+                    if i == 5:
+                        row_list.append(item[0])
+                        row_list.append(item[4:])
+                    else :
+                        row_list.append(item)
+
+                    if i == 0:
+                        self.remove("</strong>")
+                    self.remove("</td>")
+                if isFinished:
+                    return
+                # self.remove_td()
+
                 # print(row_list)
                 writer.writerow(row_list)
                 # try:
@@ -110,11 +117,11 @@ class VotersParser:
 class Scrap:
 
     def __init__(self):
-        self.base_url = 'http://lsgelection.kerala.gov.in/voters/view'
-        self.captcha_url = "http://lsgelection.kerala.gov.in/generate-captcha/_captcha_captcha"
-        self.district_url = 'http://lsgelection.kerala.gov.in/getlocalbody'
-        self.local_body_url = 'http://lsgelection.kerala.gov.in/getward'
-        self.polling_station_url = 'http://lsgelection.kerala.gov.in/getpollingstation'
+        self.base_url = 'http://www.lsgelection.kerala.gov.in/voters/view'
+        self.captcha_url = "http://www.lsgelection.kerala.gov.in/generate-captcha/_captcha_captcha"
+        self.district_url = 'http://www.lsgelection.kerala.gov.in/public/getlocalbody'
+        self.local_body_url = 'http://www.lsgelection.kerala.gov.in/public/getward'
+        self.polling_station_url = 'http://www.lsgelection.kerala.gov.in/public/getpollingstation'
 
         self.session = requests.Session()
         r = self.session.get(self.base_url)
@@ -135,11 +142,14 @@ class Scrap:
 
     def get_captcha(self):
         response = self.session.get(self.captcha_url, headers={'Cookie': self.cookie})
-        if response.status_code == 200:
-            with open("sample.jpg", 'wb') as f:
-                f.write(response.content)
+        # if response.status_code == 200:
+        #     with open("sample.jpg", 'wb') as f:
+        #         f.write(response.content)
 
-        img = cv2.imread('sample.jpg')
+        nparr = np.frombuffer(response.content, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        # img = cv2.imread('sample.jpg')
         # captcha = pytesseract.image_to_string(img, lang='eng', config=" --psm 8")
         captcha = pytesseract.image_to_string(img, lang='eng',
                                               config=" --psm 7 -c tessedit_char_whitelist=abcdefghjklmnopqrstuvwxyzABCDEFGHJKLMNOPQRXYZ")
@@ -168,17 +178,21 @@ class Scrap:
                 "form[localBody]": cur[1],
                 "form[ward]": cur[2],
                 "form[pollingStation]": cur[3],
+                "form[language]": "E",
                 "form[captcha]": captcha,
                 "form[_token]": self.token,
             }
 
             r = self.session.post(self.base_url, data=data, headers={'Cookie': self.cookie})
+            html = json.loads(r.content)["form"]
+
             # if r.status_code == 200:
-            #     with open("out.html", 'wb') as f:
-            #         f.write(r.content)
+            #     with open("out.html", 'w', encoding="utf-8") as f:
+            #         f.write(html)
+
             # print(r.content)
-            html = r.content.decode('utf-8')
-            if "District:" in html:
+            # html = r.content.decode('utf-8')
+            if "DISTRICT:" in html:
                 # print(datetime.datetime.now(), "OKOKOK")
                 # with open("out.html", 'wb') as f:
                 #     f.write(r.content)
@@ -189,7 +203,7 @@ class Scrap:
                     index_writer.writerow([no, cur[0], cur[1], cur[2], cur[3], name[0], name[1], name[2], name[3], self.votersParser.nRows])
                 break
             else:
-                print("Oh no!")
+                print("Oh no!", captcha)
 
     def setStart(self, st, no):
         self.st = st
